@@ -139,7 +139,6 @@ function endContetDisplay( $content ){
         //update user quota
         update_user_meta( $curr_userID, 'quota', $serialized_visited_array );
     }
-    
 
     //returns the entire content along with a message to leave a comment
     return $content.$get_comment; 
@@ -176,3 +175,50 @@ add_action('save_post', 'save_article_protector_meta');
 function save_article_protector_meta(){
     update_post_meta(get_the_ID(), 'paywalled', isset($_POST["premium_input"]) ? 1 : 0 );
 }
+
+
+/**
+ * Resetting post user  quota every month.
+ */
+
+
+//creating custom scheduler
+add_filter( 'cron_schedules', 'article_protector_add_cron_interval' );
+function article_protector_add_cron_interval( $schedules ) {
+    $schedules['everytwoseconds'] = 
+    [
+        'interval'  => 2, // time in seconds
+        'display'   => 'Every Two Seconds'
+    ];
+    return $schedules;
+}
+
+
+if ( ! wp_next_scheduled( 'update_user_meta' ) ) {
+    wp_schedule_event( time(), 'everytwoseconds', 'update_user_meta' );
+}
+add_action( 'update_user_meta', 'article_protector_reset_user_quota' );
+
+
+function article_protector_reset_user_quota() {
+    if(date('d') == "01" || date('d') == "1"){
+        //select users with 'quota' meta_key
+        $user_query = new WP_User_Query( ['meta_query' => [ 'meta_key' => 'quota' ]]);
+
+        // Get the results
+        $users = $user_query->get_results();
+
+        // Check for results
+        if (!empty($users)) {
+            foreach ($users as $user){
+            
+                // get all the user's data
+                $user_info = get_userdata($user->ID);
+                //update quota for all users
+                update_user_meta( $user_info->ID, 'quota', '' );
+            }
+        }
+    }
+}
+
+
