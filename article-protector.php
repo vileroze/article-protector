@@ -91,27 +91,57 @@ add_filter('template_redirect', 'article_protector_login_form');
 add_filter( 'the_content', 'endContetDisplay' );
 function endContetDisplay( $content ){
 
-    if ( !is_user_logged_in() && ( isset(get_post_meta( get_the_ID(), 'paywalled')[0]) == "1" ) ) {
-        $result = '';
-        $content_substr = substr( $content, 0, 499 );
+    $content_substr = substr( $content, 0, 499 );
+    $content_substring_with_overlay = 
+    '   
+        <div class="substr-content">
+            <div class="substr-overlay"></div>
+            '.$content_substr.'
+        </div>
+    ';
 
-        $result .=
-        '   
-            <div class="substr-content">
-                <div class="substr-overlay"></div>
-                '.$content_substr.'
-            </div>
-        ';
+    //check if no user has logged in and post is premium
+    if ( !is_user_logged_in() && ( isset(get_post_meta( get_the_ID(), 'paywalled')[0]) == "1" ) ) {
+        
+        $result = '';
+
+        $result .= $content_substring_with_overlay;
 
         $result .= article_protector_login_form();
 
         return $result;
     }
 
+    //get current logged in user details
     $curr_user = wp_get_current_user();
+    $curr_userID = $curr_user->ID;
     $curr_username = $curr_user->user_login;
+
+    //check if user has reched their quota for this month
+    $visited_articles =  get_user_meta( $curr_userID, 'quota', true ) == "" ? serialize([]) : get_user_meta( $curr_userID, 'quota', true );
+    
+    $unserialize_visited_articles = unserialize($visited_articles);
+    $quota_reached_msg = '<h3 class="article-protector-msg">You have reached your quota for this month, please comback next month !</h3>';
+    
+    if(sizeof($unserialize_visited_articles) == 3){
+        return $content_substring_with_overlay.$quota_reached_msg;
+    }
+    
+    //message asking user to leave a comment
     $get_comment = "<strong>Did you enjoy the article ".$curr_username."? Leave your thoughts below in the comments!</strong>";
 
+    //update quota of user by 1 if new article
+    if (!in_array( get_the_ID(), $unserialize_visited_articles )){
+        //add the current post id to the array
+        array_push( $unserialize_visited_articles, get_the_ID() );
+        //serialize the array
+        $serialized_visited_array = serialize($unserialize_visited_articles);
+        //update user quota
+        update_user_meta( $curr_userID, 'quota', $serialized_visited_array );
+    }
+    
+
+    //returns the entire content along with a message to leave a comment
     return $content.$get_comment; 
 }
 

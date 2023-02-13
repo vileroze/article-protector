@@ -19,3 +19,9 @@
     margin:   0px auto  30px auto;
     display: block;
 }
+
+
+.article-protector-msg{
+    color : #e74c3c;
+    text-align: center;
+}
