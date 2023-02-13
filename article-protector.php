@@ -10,7 +10,7 @@
 
 
 /**
- * Activate the plugin.
+ * Activation hook
  */
 function article_protector_activate() { 
 	// Clear the permalinks after the post type has been registered.
@@ -29,6 +29,9 @@ function article_protector_deactivate() {
 register_deactivation_hook( __FILE__, 'article_protector_deactivate' );
 
 
+/**
+ * Register styles and scripts.
+ */
 
 // register style on initialization
 add_action('init', 'register_custom_style');
@@ -42,6 +45,10 @@ function enqueue_style(){
 	wp_enqueue_style( 'custom-plugin-style' );
 }
 
+
+/**
+ * Frontend user login form
+ */
 
 function article_protector_login_form(){
 
@@ -61,7 +68,7 @@ function article_protector_login_form(){
             </form>
         </div>
 
-    <?php 
+    <?php
 
     if( isset($_POST['userlogin']) ){
         $user_name = $_POST['username'];
@@ -76,8 +83,14 @@ function article_protector_login_form(){
         $user = wp_signon( $creds, false );
     
         if ( is_wp_error( $user ) ) {
-            echo $user->get_error_message();
+            $wp_err =  $user->get_error_message();
+
+            return $wp_err;
         }
+
+        //redirect back to current page
+        global $wp;
+        wp_safe_redirect(home_url( $wp->request ));
     }
 
     return ob_get_clean();
@@ -87,8 +100,31 @@ add_filter('template_redirect', 'article_protector_login_form');
 // add_action( 'init', 'custom_login_form' );
 
 
+
+/**
+ * When a user logs out, redirect them to the home page.
+ */
+function logout_redirect_home(){
+wp_safe_redirect(home_url());
+exit;
+}
+add_action('wp_logout', 'logout_redirect_home');
+
+
+
 //show variation of article according to if user logged in or not
 add_filter( 'the_content', 'endContetDisplay' );
+/**
+ * If the user is not logged in and the post is premium, display the first 500 characters of the post
+ * and a login form. 
+ * If the user is logged in and the post is premium, display the entire post and a message asking the
+ * user to leave a comment. 
+ * If the user is logged in and the post is not premium, display the entire post.
+ * 
+ * @param content The post content.
+ * 
+ * @return content The post content.
+ */
 function endContetDisplay( $content ){
 
     $content_substr = substr( $content, 0, 499 );
@@ -104,25 +140,26 @@ function endContetDisplay( $content ){
     if ( !is_user_logged_in() && ( isset(get_post_meta( get_the_ID(), 'paywalled')[0]) == "1" ) ) {
         
         $result = '';
-
         $result .= $content_substring_with_overlay;
-
         $result .= article_protector_login_form();
 
         return $result;
     }
+
+    //logout button
+    $logout_url = "http://usingchildtheme.local/wp-login.php?action=logout";
+    $logout_button = '<a class="logout-btn" href="'.$logout_url.'">LOGOUT</a>';
 
     //get current logged in user details
     $curr_user = wp_get_current_user();
     $curr_userID = $curr_user->ID;
     $curr_username = $curr_user->user_login;
 
-    //check if user has reched their quota for this month
+    //get all articles for the user
     $visited_articles =  get_user_meta( $curr_userID, 'quota', true ) == "" ? serialize([]) : get_user_meta( $curr_userID, 'quota', true );
-    
     $unserialize_visited_articles = unserialize($visited_articles);
     $quota_reached_msg = '<h3 class="article-protector-msg">You have reached your quota for this month, please comback next month !</h3>';
-    
+    //check if user reached quota
     if(sizeof($unserialize_visited_articles) == 3){
         return $content_substring_with_overlay.$quota_reached_msg;
     }
@@ -140,8 +177,8 @@ function endContetDisplay( $content ){
         update_user_meta( $curr_userID, 'quota', $serialized_visited_array );
     }
 
-    //returns the entire content along with a message to leave a comment
-    return $content.$get_comment; 
+    //displays the entire content along with a message to leave a comment
+    return $content.$get_comment.$logout_button; 
 }
 
 
@@ -181,7 +218,6 @@ function save_article_protector_meta(){
  * Resetting post user  quota every month.
  */
 
-
 //creating custom scheduler
 add_filter( 'cron_schedules', 'article_protector_add_cron_interval' );
 function article_protector_add_cron_interval( $schedules ) {
@@ -193,14 +229,18 @@ function article_protector_add_cron_interval( $schedules ) {
     return $schedules;
 }
 
-
+//check if laready scheduled, if not, schedule 
 if ( ! wp_next_scheduled( 'update_user_meta' ) ) {
     wp_schedule_event( time(), 'everytwoseconds', 'update_user_meta' );
 }
 add_action( 'update_user_meta', 'article_protector_reset_user_quota' );
 
-
+/**
+ * If today is the first day of the month, then for each user with a 'quota' meta_key, set the value of
+ * that meta_key to an empty string.
+ */
 function article_protector_reset_user_quota() {
+    //check if today is starting of month
     if(date('d') == "01" || date('d') == "1"){
         //select users with 'quota' meta_key
         $user_query = new WP_User_Query( ['meta_query' => [ 'meta_key' => 'quota' ]]);
@@ -214,6 +254,7 @@ function article_protector_reset_user_quota() {
             
                 // get all the user's data
                 $user_info = get_userdata($user->ID);
+
                 //update quota for all users
                 update_user_meta( $user_info->ID, 'quota', '' );
             }
