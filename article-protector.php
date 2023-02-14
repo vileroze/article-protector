@@ -40,6 +40,7 @@ function article_protector_init(){
     //register styles
 	wp_register_style( 'custom-plugin-style', plugins_url('/public/css/article-protector-public.css', __FILE__), false, '1.0.0', 'all');
 
+
     /**
      * Adding logout button at the end of main menu if user logged in
      */
@@ -204,7 +205,15 @@ function endContetDisplay( $content ){
     $visited_articles =  get_user_meta( $curr_userID, 'quota', true ) == "" ? serialize([]) : get_user_meta( $curr_userID, 'quota', true );
     $unserialize_visited_articles = unserialize($visited_articles);
 
+    //get time left
+    $dtFirst = new DateTime('first day of next month');
+    $dtToday = new DateTime('today');
+    $time_until_task_will_run = $dtToday->diff($dtFirst);
+    $days_remaining = $time_until_task_will_run->format('%a');
+
     $quota_reached_msg = '<h5 class="article-protector-msg">You have reached your quota for this month, please comback next month !</h5>';
+    $quota_reached_msg .= '<p class="article-protector-msg" style="font-weight:bold;">'.$days_remaining.' days remaining !!</p>';
+
     //check if user reached quota
     if(sizeof($unserialize_visited_articles) == (int)get_option( 'ap_month_quota', '3' )){
         return $content_substring_with_overlay.$quota_reached_msg;
@@ -262,30 +271,32 @@ function save_article_protector_meta(){
  * Resetting post user  quota every month.
  */
 
-//creating custom scheduler
-add_filter( 'cron_schedules', 'article_protector_add_cron_interval' );
-function article_protector_add_cron_interval( $schedules ) {
-    $schedules['everytwoseconds'] = 
-    [
-        'interval'  => 2, // time in seconds
-        'display'   => 'Every Two Seconds'
-    ];
-    return $schedules;
-}
+// // creating custom scheduler
+// add_filter( 'cron_schedules', 'article_protector_add_cron_interval' );
+// function article_protector_add_cron_interval( $schedules ) {
+//     $schedules['everytwoseconds'] = 
+//     [
+//         'interval'  => 2, // time in seconds
+//         'display'   => 'Every Two Seconds'
+//     ];
+//     return $schedules;
+// }
 
 //check if laready scheduled, if not, schedule 
-if ( ! wp_next_scheduled( 'update_user_meta' ) ) {
-    wp_schedule_event( time(), 'everytwoseconds', 'update_user_meta' );
+if ( ! wp_next_scheduled( 'update_user_meta_quota' ) ) {
+    wp_schedule_event( strtotime( '12am today' ), 'daily', 'update_user_meta_quota' );
 }
-add_action( 'update_user_meta', 'article_protector_reset_user_quota' );
+add_action( 'update_user_meta_quota', 'article_protector_reset_user_quota' );
+
 
 /**
  * If today is the first day of the month, then for each user with a 'quota' meta_key, set the value of
  * that meta_key to an empty string.
  */
+
 function article_protector_reset_user_quota() {
     //check if today is starting of month
-    if(date('d') == "01" || date('d') == "1"){
+    if( date('d') == "01" ){
         //select users with 'quota' meta_key
         $user_query = new WP_User_Query( ['meta_query' => [ 'meta_key' => 'quota' ]]);
 
@@ -293,11 +304,11 @@ function article_protector_reset_user_quota() {
         $users = $user_query->get_results();
 
         // Check for results
-        if (!empty($users)) {
-            foreach ($users as $user){
+        if ( ! empty( $users ) ) {
+            foreach ( $users as $user ){
             
                 // get all the user's data
-                $user_info = get_userdata($user->ID);
+                $user_info = get_userdata( $user->ID );
 
                 //update quota for all users
                 update_user_meta( $user_info->ID, 'quota', '' );
@@ -305,6 +316,3 @@ function article_protector_reset_user_quota() {
         }
     }
 }
-
-
-
