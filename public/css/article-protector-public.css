@@ -28,14 +28,14 @@
 
 
 a.logout-btn{
-    max-width: 5rem;
-    display:block;
+    max-width: 5.7rem;
+    display:inline;
     border: none;
     border-radius: 3px;
     font-weight: bold;
     color: #ffffff!important;
     background: #e74c3c;
-    font-size: 11px;
+    font-size: 0.875rem;
     font-weight: bold;
     line-height: 1;
     padding: 11px 15px;

@@ -34,9 +34,36 @@ register_deactivation_hook( __FILE__, 'article_protector_deactivate' );
  */
 
 // register style on initialization
-add_action('init', 'register_custom_style');
-function register_custom_style(){
+add_action('init', 'article_protector_init');
+function article_protector_init(){
+
+    //register styles
 	wp_register_style( 'custom-plugin-style', plugins_url('/public/css/article-protector-public.css', __FILE__), false, '1.0.0', 'all');
+
+    /**
+     * Adding logout button at the end of main menu if user logged in
+     */
+
+    if( is_user_logged_in() ){
+        add_filter('wp_nav_menu_items','article_protector_custom_menu_items', 10, 2);
+        function article_protector_custom_menu_items( $items, $args ) 
+        {
+            if( $args->theme_location == 'menu-1' ) // only for primary menu
+            {
+                $items_array = array();
+                while ( false !== ( $item_pos = strpos ( $items, '<li', 3 ) ) )
+                {
+                    $items_array[] = substr($items, 0, $item_pos);
+                    $items = substr($items, $item_pos);
+                }
+                $items_array[] = $items;
+                array_splice($items_array, sizeof($items_array), 0, '<li><a class="logout-btn" href='.wp_logout_url( home_url() ).'>LOGOUT</a></li>'); // insert custom item after 2nd one
+
+                $items = implode('', $items_array);
+            }
+            return $items;
+        }
+    }
 }
 
 // use the style above
@@ -168,9 +195,6 @@ function endContetDisplay( $content ){
         return $result;
     }
 
-    //logout button
-    $logout_button = '<a class="logout-btn" href='.wp_logout_url( home_url() ).'>LOGOUT</a>';
-
     //get current logged in user details
     $curr_user = wp_get_current_user();
     $curr_userID = $curr_user->ID;
@@ -180,14 +204,14 @@ function endContetDisplay( $content ){
     $visited_articles =  get_user_meta( $curr_userID, 'quota', true ) == "" ? serialize([]) : get_user_meta( $curr_userID, 'quota', true );
     $unserialize_visited_articles = unserialize($visited_articles);
 
-    $quota_reached_msg = '<h5 class="article-protector-msg">You have reached your quota for this month, please comback next month !</h5>'.( is_user_logged_in() ? $logout_button : '' );
+    $quota_reached_msg = '<h5 class="article-protector-msg">You have reached your quota for this month, please comback next month !</h5>';
     //check if user reached quota
     if(sizeof($unserialize_visited_articles) == (int)get_option( 'ap_month_quota', '3' )){
         return $content_substring_with_overlay.$quota_reached_msg;
     }
     
     //message asking user to leave a comment
-    $get_comment = "<strong>Did you enjoy the article ".$curr_username."? Leave your thoughts below in the comments!</strong>" . ( is_user_logged_in() ? $logout_button : '' );
+    $get_comment = "<strong>Did you enjoy the article ".$curr_username."? Leave your thoughts below in the comments!</strong>";
 
     //update quota of user by 1 if new article
     if (!in_array( get_the_ID(), $unserialize_visited_articles )){
