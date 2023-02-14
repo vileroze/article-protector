@@ -47,6 +47,41 @@ function enqueue_style(){
 
 
 /**
+ * Admin settings page
+ */
+
+ add_action( 'admin_menu', 'article_protector_settings_link' );
+ function article_protector_settings_link(){
+    add_options_page( 'Article Protector Settings', 'Article Protector', 'manage_options', 'article-protector-settings-page', 'article_protector_HTML' );
+ }
+ 
+ add_action( 'admin_init', 'ap_settings' );
+ function ap_settings(){
+     add_settings_section( 'ap_quota_section', null, null, 'article-protector-settings-page' );
+     add_settings_field( 'ap_month_quota', 'Number of premium articles per user per month', 'quotaHTML', 'article-protector-settings-page', 'ap_quota_section' );
+     register_setting( 'article_protector_plugin', 'ap_month_quota', ['sanitize_callback' => 'sanitize_text_field', 'default' => '3'] );
+ }
+ 
+ function quotaHTML(){ 
+     $curr_article_quota = get_option( 'ap_month_quota', '3' ) ;
+     echo '<input type="text" placeholder="Article quota per month" name="ap_month_quota" value="'.$curr_article_quota.'">';
+ }
+ 
+ function article_protector_HTML() { ?>
+     <div>
+         <h1>Article Protector Settings</h1>
+         <form action="options.php" method="POST">
+             <?php 
+                 settings_fields( 'article_protector_plugin' );
+                 do_settings_sections( 'article-protector-settings-page' );
+                 submit_button();
+             ?>
+         </form>
+     </div>
+ <?php }
+
+
+/**
  * Frontend user login form
  */
 
@@ -100,18 +135,6 @@ add_filter('template_redirect', 'article_protector_login_form');
 // add_action( 'init', 'custom_login_form' );
 
 
-
-/**
- * When a user logs out, redirect them to the home page.
- */
-function logout_redirect_home(){
-wp_safe_redirect(home_url());
-exit;
-}
-add_action('wp_logout', 'logout_redirect_home');
-
-
-
 //show variation of article according to if user logged in or not
 add_filter( 'the_content', 'endContetDisplay' );
 /**
@@ -133,12 +156,11 @@ function endContetDisplay( $content ){
         <div class="substr-content">
             <div class="substr-overlay"></div>
             '.$content_substr.'
-        </div>
-    ';
+        </div>';
 
     //check if no user has logged in and post is premium
-    if ( !is_user_logged_in() && ( isset(get_post_meta( get_the_ID(), 'paywalled')[0]) == "1" ) ) {
-        
+    if ( !is_user_logged_in() && ( isset( get_post_meta( get_the_ID(), 'paywalled')[0] ) == "1" ) ) {
+        //return only first 100 words of content
         $result = '';
         $result .= $content_substring_with_overlay;
         $result .= article_protector_login_form();
@@ -147,8 +169,7 @@ function endContetDisplay( $content ){
     }
 
     //logout button
-    $logout_url = "http://usingchildtheme.local/wp-login.php?action=logout";
-    $logout_button = '<a class="logout-btn" href="'.$logout_url.'">LOGOUT</a>';
+    $logout_button = '<a class="logout-btn" href='.wp_logout_url( home_url() ).'>LOGOUT</a>';
 
     //get current logged in user details
     $curr_user = wp_get_current_user();
@@ -158,14 +179,15 @@ function endContetDisplay( $content ){
     //get all articles for the user
     $visited_articles =  get_user_meta( $curr_userID, 'quota', true ) == "" ? serialize([]) : get_user_meta( $curr_userID, 'quota', true );
     $unserialize_visited_articles = unserialize($visited_articles);
-    $quota_reached_msg = '<h3 class="article-protector-msg">You have reached your quota for this month, please comback next month !</h3>';
+
+    $quota_reached_msg = '<h5 class="article-protector-msg">You have reached your quota for this month, please comback next month !</h5>'.( is_user_logged_in() ? $logout_button : '' );
     //check if user reached quota
-    if(sizeof($unserialize_visited_articles) == 3){
+    if(sizeof($unserialize_visited_articles) == (int)get_option( 'ap_month_quota', '3' )){
         return $content_substring_with_overlay.$quota_reached_msg;
     }
     
     //message asking user to leave a comment
-    $get_comment = "<strong>Did you enjoy the article ".$curr_username."? Leave your thoughts below in the comments!</strong>";
+    $get_comment = "<strong>Did you enjoy the article ".$curr_username."? Leave your thoughts below in the comments!</strong>" . ( is_user_logged_in() ? $logout_button : '' );
 
     //update quota of user by 1 if new article
     if (!in_array( get_the_ID(), $unserialize_visited_articles )){
@@ -178,7 +200,7 @@ function endContetDisplay( $content ){
     }
 
     //displays the entire content along with a message to leave a comment
-    return $content.$get_comment.$logout_button; 
+    return $content.$get_comment; 
 }
 
 
@@ -202,8 +224,7 @@ function article_protector_metabox_field(){
     echo '
         <form id="articleProtectorForm" action="" method="POST">
             <input type="checkbox" name="premium_input" id="premium_input" value="1" '.$is_premium_article.'> Premium article
-        </form>
-    ';
+        </form>';
     
 }
 
@@ -212,7 +233,6 @@ add_action('save_post', 'save_article_protector_meta');
 function save_article_protector_meta(){
     update_post_meta(get_the_ID(), 'paywalled', isset($_POST["premium_input"]) ? 1 : 0 );
 }
-
 
 /**
  * Resetting post user  quota every month.
@@ -261,5 +281,6 @@ function article_protector_reset_user_quota() {
         }
     }
 }
+
 
 
