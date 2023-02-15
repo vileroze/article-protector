@@ -26,6 +26,10 @@
     text-align: center;
 }
 
+p.article-protector-msg{
+    font-weight: bold;
+}
+
 
 a.logout-btn{
     max-width: 5.7rem;
