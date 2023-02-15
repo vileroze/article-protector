@@ -109,7 +109,8 @@
         $quota_reached_msg .= '<p class="article-protector-msg">'.$days_remaining.' day(s) remaining !!</p>';
 
         //check if user reached quota
-        if(sizeof($unserialize_visited_articles) == (int)get_option( 'ap_month_quota', '3' )){
+        if(sizeof($unserialize_visited_articles) == (int)get_option( 'ap_month_quota', '3' ) && in_array( get_the_ID(), $unserialize_visited_articles) != 1 ){
+            
             return $content_substring_with_overlay.$quota_reached_msg;
         }
         
