@@ -33,7 +33,6 @@ p.article-protector-msg{
 
 a.logout-btn{
     max-width: 5.7rem;
-    display:inline;
     border: none;
     border-radius: 3px;
     font-weight: bold;
@@ -41,7 +40,5 @@ a.logout-btn{
     background: #e74c3c;
     font-size: 0.875rem;
     font-weight: bold;
-    line-height: 1;
-    padding: 11px 15px;
     text-transform: uppercase;
 }

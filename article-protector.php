@@ -2,7 +2,7 @@
 
 /* 
     Plugin Name: Article Protector
-    Description: Protect your articles through a paywall 
+    Description: Protects your articles through a paywall and set the number of premium articles per month
     Version: 1.0
     Author: Vileroze
     Author URI: https://youtube.com
