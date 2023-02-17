@@ -41,20 +41,19 @@
         
             if ( is_wp_error( $user ) ) {
                 $wp_err =  $user->get_error_message();
-
-                return $wp_err;
+                echo $wp_err;
+            }else{
+                //redirect back to current page
+                global $wp;
+                wp_safe_redirect(home_url( $wp->request ));
             }
-
-            //redirect back to current page
-            global $wp;
-            wp_safe_redirect(home_url( $wp->request ));
+            
         }
 
         return ob_get_clean();
 
     }
     add_filter('template_redirect', 'article_protector_login_form');
-    // add_action( 'init', 'custom_login_form' );
 
 
     //show variation of article according to if user logged in or not
@@ -96,8 +95,11 @@
         $curr_username = $curr_user->user_login;
 
         //get all articles the user has already read
-        $visited_articles =  get_user_meta( $curr_userID, 'quota', true ) == "" ? serialize([]) : get_user_meta( $curr_userID, 'quota', true );
+        $visited_articles =  get_user_meta( $curr_userID, 'visited_articles', true ) == "" ? serialize([]) : get_user_meta( $curr_userID, 'visited_articles', true );
         $unserialize_visited_articles = unserialize($visited_articles);
+
+        //get specific user article quota, if no value sets to 3 as default
+        $user_article_quota = get_user_meta( $curr_userID, 'article_quota', true ) > 0 ? get_user_meta( $curr_userID, 'article_quota', true ) : 3;
 
         //get time left
         $dtFirst = new DateTime('first day of next month'); //first day of next month
@@ -105,12 +107,12 @@
         $time_until_task_will_run = $dtToday->diff($dtFirst);
         $days_remaining = $time_until_task_will_run->format('%a');
 
+        //message to show user if auota reached for current month
         $quota_reached_msg = '<h5 class="article-protector-msg">You have reached your quota for this month, please comback next month !!</h5>';
         $quota_reached_msg .= '<p class="article-protector-msg">'.$days_remaining.' day(s) remaining !!</p>';
 
         //check if user reached quota
-        if(sizeof($unserialize_visited_articles) == (int)get_option( 'ap_month_quota', '3' ) && in_array( get_the_ID(), $unserialize_visited_articles) != 1 ){
-            
+        if( ( sizeof($unserialize_visited_articles) > $user_article_quota ) && in_array( get_the_ID(), $unserialize_visited_articles) != 1 ){ // //sizeof($unserialize_visited_articles) == (int)get_option( 'ap_month_quota', '3' )
             return $content_substring_with_overlay.$quota_reached_msg;
         }
         
@@ -118,14 +120,18 @@
         $get_comment = "<strong>Did you enjoy the article ".$curr_username."? Leave your thoughts below in the comments!</strong>";
 
         //update quota of user by if user visits new article
-        if ( ! in_array( get_the_ID(), $unserialize_visited_articles ) ){
-            if ( ( isset( get_post_meta( get_the_ID(), 'paywalled')[0] ) == "1" ) ) {
+        if ( ! in_array( get_the_ID(), $unserialize_visited_articles ) ){ //checks if article already read
+            if ( ( isset( get_post_meta( get_the_ID(), 'paywalled')[0] ) == "1" ) ) { //checks for premium articles
                 //add the current post id to the array
                 array_push( $unserialize_visited_articles, get_the_ID() );
-                //serialize the array
+
                 $serialized_visited_array = serialize($unserialize_visited_articles);
-                //update user quota
-                update_user_meta( $curr_userID, 'quota', $serialized_visited_array );
+
+                //update visited_articles meta
+                update_user_meta( $curr_userID, 'visited_articles', $serialized_visited_array );
+
+                //decrement user article_quota meta
+                update_user_meta( $curr_userID, 'remaining_article_quota', $user_article_quota - 1 );
             }
         }
 

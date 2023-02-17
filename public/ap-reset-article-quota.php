@@ -11,13 +11,39 @@ function article_protector_reset_user_quota() {
     $last_quota_reset_month = str_pad( getdate( strtotime( get_option( 'last_run_month', '' ) ) )['mon'], 2, '0', STR_PAD_LEFT );
     $curr_month = date('m');
 
-    if( $curr_month == $last_quota_reset_month + 1 ){
+    // if( $curr_month == $last_quota_reset_month + 1 ){
+
+    //     //set last reset month to current month
+    //     update_option( 'last_run_month', date("Y-m-d") );
+
+    //     //select users with 'quota' meta_key
+    //     $user_query = new WP_User_Query( ['meta_query' => [ 'meta_key' => 'quota' ]]);
+
+    //     // Get the results
+    //     $users = $user_query->get_results();
+
+    //     // Check for results
+    //     if ( ! empty( $users ) ) {
+    //         foreach ( $users as $user ){
+            
+    //             // get all the user's data
+    //             $user_info = get_userdata( $user->ID );
+
+    //             //update quota for all users
+    //             update_user_meta( $user_info->ID, 'quota', '' );
+    //         }
+    //     }
+    // }
+
+    //////////////////////////////////////
+
+    if( $curr_month == 2 ){
 
         //set last reset month to current month
-        update_option( 'last_run_month', date("Y-m-d") );
+        // update_option( 'last_run_month', date("Y-m-d") );
 
-        //select users with 'quota' meta_key
-        $user_query = new WP_User_Query( ['meta_query' => [ 'meta_key' => 'quota' ]]);
+        //select users with 'article_quota' meta key
+        $user_query = new WP_User_Query( ['meta_query' => [ 'meta_key' => 'article_quota' ]]);
 
         // Get the results
         $users = $user_query->get_results();
@@ -29,8 +55,24 @@ function article_protector_reset_user_quota() {
                 // get all the user's data
                 $user_info = get_userdata( $user->ID );
 
-                //update quota for all users
-                update_user_meta( $user_info->ID, 'quota', '' );
+                //get user article_quota and remaining_article_quota meta
+                $remaining_user_article_quota = (int)get_user_meta( $user_info->ID, 'remaining_article_quota', true );
+                $og_user_article_quota = (int)get_user_meta( $user_info->ID, 'article_quota', true );
+
+                $next_month_article_quota = 0;
+
+                //carry over remaining quota to next month only if remaining quota is equal to or less than 3
+                if ( $remaining_user_article_quota <= 3 ) {
+                    $next_month_article_quota = $og_user_article_quota + $remaining_user_article_quota;
+                }else{
+                    $next_month_article_quota = $og_user_article_quota;
+                }
+                
+                //update article_quota
+                update_user_meta( $user_info->ID, 'article_quota', $next_month_article_quota );
+
+                //reset the remainng_article_quota to 0
+                update_user_meta( $user_info->ID, 'remaining_article_quota', 0 );
             }
         }
     }
