@@ -45,7 +45,7 @@ function article_protector_init(){
     }
 
     /**
-     * Adding logout button at the end of main menu if user logged in
+     * Adding logout button and account page at the end of main menu if user logged in
      */
 
     if( is_user_logged_in() ){
@@ -60,8 +60,16 @@ function article_protector_init(){
                     $items_array[] = substr($items, 0, $item_pos);
                     $items = substr($items, $item_pos);
                 }
+
                 $items_array[] = $items;
-                array_splice($items_array, sizeof($items_array), 0, '<li><a class="logout-btn" href='.wp_logout_url( home_url() ).'>LOGOUT</a></li>'); // insert custom item after 2nd one
+
+                // insert custom item at the end
+                array_splice($items_array, sizeof($items_array), 0, '<li><a href="http://usingchildtheme.local/account/">ACCOUNT</a></li>');
+
+                // insert custom item at the end
+                array_splice($items_array, sizeof($items_array), 0, '<li><a class="logout-btn" href='.wp_logout_url( home_url() ).'>LOGOUT</a></li>');
+
+                
 
                 $items = implode('', $items_array);
             }
@@ -148,9 +156,10 @@ function article_protector_init(){
             // creates new user and gets id
             $curr_registered_user_id = wp_create_user( $user_name, $confirm_password, $user_email );
 
-            //add "article quota" to user meta 
+            //add different quotas to user meta 
             add_user_meta( $curr_registered_user_id, 'og_article_quota', $article_quota );
             add_user_meta( $curr_registered_user_id, 'article_quota', $article_quota );
+            add_user_meta( $curr_registered_user_id, 'remaining_article_quota', $article_quota );
 
         }else{
             //displays all errors

@@ -1,3 +1,20 @@
+/* error messsage formatting */
+.err{
+    margin: auto;
+    width: fit-content;
+    padding: 10px 5px;
+    color: red;
+    border: 3px solid red;
+    border-radius: 10%;
+}
+
+.err span{
+    font-weight: bold;
+}
+
+
+/* main content */
+
 .substr-content{
     position: relative;
 }
@@ -121,4 +138,36 @@ button#myBtn{
     margin:   0px auto  30px auto;
     display: block;
     margin-left: 40%;
+}
+
+
+/* accounts page */
+
+.account-section{
+    margin: auto auto;
+    margin-bottom: 3rem;
+    width: 550px;
+    display: flex;
+}
+
+.account-section .avatar-section{
+    padding-top: 3rem;
+    /* float: left; */
+}
+
+.account-section .avatar-section img{
+    border-radius: 50%;
+}
+
+.account-section .info-section{
+    margin-left: 30%;
+    /* float: right; */
+}
+
+.account-section .info-section input[type=submit]{
+    display: block;
+}
+
+.pass-reset{
+    text-decoration: underline;
 }

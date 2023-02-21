@@ -1,5 +1,75 @@
 <?php
 
+    /**
+     * Account edit page
+     */
+    function account_settings(){
+        ob_start(); 
+
+        //get current logged in user details
+        $curr_user = wp_get_current_user();
+        $curr_user_ID = $curr_user->ID;
+        $curr_user_displayname = $curr_user->display_name;
+        $curr_user_email = $curr_user->user_email;
+        $curr_user_img_url = get_avatar_url( $curr_user_ID, [ 'size' => 200 ] );
+
+        ?>
+            <div class="account-section">
+                <div class="avatar-section">
+                    <img src="<?php echo $curr_user_img_url; ?>" alt="user-avatar">
+                </div>
+                <div class="info-section">
+                    <form action="" method="post">
+                        
+                        <input type="hidden" name="userid" value="<?php echo $curr_user_ID; ?>">
+
+                        <label for="displayname"><b><?php echo __('Display Name', 'hitmag'); ?></b></label>
+                        <input type="text" placeholder="Enter display name" name="displayname" value="<?php echo (isset($_POST['displayname']) ? $_POST['displayname'] : $curr_user_displayname) ?>" >
+
+                        <label for="email"><b><?php echo __('ay Name', 'hitmag'); ?></b></label>
+                        <input type="email" placeholder="Enter email" name="useremail" value="<?php echo (isset($_POST['useremail']) ? $_POST['useremail'] : $curr_user_email) ?>" >
+                
+                        <input type="submit" name="userUpdate" value="UPDATE">
+                    </form>
+
+                    <div class="pass-reset">
+                        <!-- reset password link -->
+                        <a href="<?php echo esc_url( wp_lostpassword_url() ); ?>"> <?php esc_html_e( 'Want to reset your password?', 'hitmag' ); ?> </a>
+                    </div>
+                </div>
+            </div>
+            
+        <?php
+
+
+        if( isset($_POST['userUpdate']) ){
+            $user_displayname = $_POST['displayname'];
+            $user_email = $_POST['useremail'];
+            $user_id = $_POST['userid'];
+
+            if ( ! empty( $user_displayname ) && ! empty( $user_email ) ) {
+                //updates user details
+                $user_data = wp_update_user( [ 'ID' => $user_id, 'user_email' => $user_email, 'display_name' => $user_displayname ] );
+                
+                //check for any error, if no error found refresh page
+                if ( is_wp_error( $user_data ) ) {
+                    // print error message
+                    $wp_err =  $user_data->get_error_message();
+                    echo '<p class="err"><span>&times;</span>&nbsp;&nbsp;&nbsp;'.$wp_err.'</p>';
+                } else {
+                    //redirect to "account" page
+                    global $wp;
+                    wp_safe_redirect( home_url( $wp->request ) );
+                }
+            } else{
+                echo '<p class="err"> <span>&times;</span>&nbsp;&nbsp;&nbsp;All the fields must be filled !! </p>';
+            }
+            
+        }
+
+        return ob_get_clean();
+    }
+    add_filter('template_redirect', 'account_settings');
 
     /**
      * Frontend user login form
@@ -49,9 +119,7 @@
             }
             
         }
-
         return ob_get_clean();
-
     }
     add_filter('template_redirect', 'article_protector_login_form');
 
@@ -70,6 +138,11 @@
      * @return content The post content.
      */
     function endContetDisplay( $content ){
+
+        //check if is "accounts" page
+        if ( is_page(79) ) {
+            return account_settings() . $content;
+        }
 
         $content_substr = substr( $content, 0, 499 );
         $content_substring_with_overlay = 
@@ -99,7 +172,7 @@
         $unserialize_visited_articles = unserialize($visited_articles);
 
         //get specific user article quota, if no value sets to 3 as default
-        $user_article_quota = get_user_meta( $curr_userID, 'article_quota', true ) > 0 ? get_user_meta( $curr_userID, 'article_quota', true ) : 3;
+        $user_article_quota = get_user_meta( $curr_userID, 'remaining_article_quota', true ) > 0 ? get_user_meta( $curr_userID, 'remaining_article_quota', true ) : 3;
 
         //get time left
         $dtFirst = new DateTime('first day of next month'); //first day of next month

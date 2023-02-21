@@ -43,7 +43,7 @@ function article_protector_reset_user_quota() {
         // update_option( 'last_run_month', date("Y-m-d") );
 
         //select users with 'article_quota' meta key
-        $user_query = new WP_User_Query( ['meta_query' => [ 'meta_key' => 'article_quota' ]]);
+        $user_query = new WP_User_Query( ['meta_query' => [ 'meta_key' => 'og_article_quota' ]]);
 
         // Get the results
         $users = $user_query->get_results();
@@ -57,15 +57,15 @@ function article_protector_reset_user_quota() {
 
                 //get user article_quota and remaining_article_quota meta
                 $remaining_user_article_quota = (int)get_user_meta( $user_info->ID, 'remaining_article_quota', true );
-                $og_user_article_quota = (int)get_user_meta( $user_info->ID, 'article_quota', true );
+                $curr_month_article_quota = (int)get_user_meta( $user_info->ID, 'article_quota', true );
 
                 $next_month_article_quota = 0;
 
                 //carry over remaining quota to next month only if remaining quota is equal to or less than 3
                 if ( $remaining_user_article_quota <= 3 ) {
-                    $next_month_article_quota = $og_user_article_quota + $remaining_user_article_quota;
+                    $next_month_article_quota = $curr_month_article_quota + $remaining_user_article_quota;
                 }else{
-                    $next_month_article_quota = $og_user_article_quota;
+                    $next_month_article_quota = $curr_month_article_quota;
                 }
                 
                 //update article_quota
@@ -73,6 +73,9 @@ function article_protector_reset_user_quota() {
 
                 //reset the remainng_article_quota to 0
                 update_user_meta( $user_info->ID, 'remaining_article_quota', 0 );
+
+                //clear visited articles
+                
             }
         }
     }
