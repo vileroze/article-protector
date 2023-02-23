@@ -26,7 +26,7 @@
                         <label for="displayname"><b><?php echo __('Display Name', 'hitmag'); ?></b></label>
                         <input type="text" placeholder="Enter display name" name="displayname" value="<?php echo (isset($_POST['displayname']) ? $_POST['displayname'] : $curr_user_displayname) ?>" >
 
-                        <label for="email"><b><?php echo __('ay Name', 'hitmag'); ?></b></label>
+                        <label for="email"><b><?php echo __('Email', 'hitmag'); ?></b></label>
                         <input type="email" placeholder="Enter email" name="useremail" value="<?php echo (isset($_POST['useremail']) ? $_POST['useremail'] : $curr_user_email) ?>" >
                 
                         <input type="submit" name="userUpdate" value="UPDATE">
